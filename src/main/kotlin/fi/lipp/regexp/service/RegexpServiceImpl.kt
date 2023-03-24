@@ -14,7 +14,7 @@ class RegexpServiceImpl : RegexpService {
         assertValidRegEx(pattern)
 
         val expression = RegExParser(pattern).parse()
-        val nda = RegExInterpreter.makeNDA(expression)
+        val automaton = RegExInterpreter.makeDFA(expression)
 
         val text = StringBuilder(editor.getText())
         // Used a hack here. Since only ascii characters are allowed,
@@ -29,7 +29,7 @@ class RegexpServiceImpl : RegexpService {
         // Generating suffixes of the string to collect all matching end indices
         for (i in 0..text.length) {
             val indexesFromI = mutableSetOf<Int>()
-            accept(nda, text.substring(i), i, indexesFromI)
+            accept(automaton, text.substring(i), i, indexesFromI)
             indexesFromI.forEach { indexes.add(i to (it - editor.getCarets().size)) }
         }
 
@@ -37,58 +37,60 @@ class RegexpServiceImpl : RegexpService {
     }
 
     /**
-     * Tests whether there exists a pathway the string traverses the NDA such that
+     * Tests whether there exists a pathway the string traverses the NFA such that
      * it reaches the end state.
      *
-     * @param nda NDA of the RegEx
+     * @param finiteAutomaton NFA of the RegEx
      * @param string input string to test
      * @param index the current index of the test string
      * @param indexes the list of accepted end indices
-     * @param state the current state of the NDA to examine
-     * @return true is the entire string satisfies the NDA
+     * @param state the current state of the NFA to examine
+     * @return true is the entire string satisfies the NFA
      */
     private fun accept(
-        nda: NDA,
+        finiteAutomaton: FiniteAutomaton,
         string: String,
         index: Int,
         indexes: MutableSet<Int>,
-        state: Int = nda.start
+        state: Int = finiteAutomaton.start
     ) {
-        if (state == nda.end) {
+        if (state in finiteAutomaton.ends) {
             indexes.add(index)
         }
 
-        // test all the possible paths from the NDA
-        val possibilities = nda.transitions.filter { t -> t.from == state }
+        // test all the possible paths from the Automaton
+        val possibilities = finiteAutomaton.transitions.filter { t -> t.from == state }
         for (possibility in possibilities)
-            test(nda, string, possibility, index, indexes)
+            test(finiteAutomaton, string, possibility, index, indexes)
     }
 
     /**
      * Test if the given transition with the string would result in a successful traversal
-     * through the NDA
+     * through the NFA
      *
-     * @param nda of the RegEx
+     * @param finiteAutomaton of the RegEx
      * @param string the testing string
-     * @param transition the transition possibility from the NDA
+     * @param transition the transition possibility from the NFA
      * @param index the current index of the test string
      * @param indexes the list of accepted end indices
      * @return true if the transition is valid
      */
     private fun test(
-        nda: NDA,
+        finiteAutomaton: FiniteAutomaton,
         string: String,
-        transition: NDA.Transition,
+        transition: FiniteAutomaton.Transition,
         index: Int,
         indexes: MutableSet<Int>
     ) {
-        if (transition.label == NDA.Label.Eps) // Eps labels can always be traversed
-            return accept(nda, string, index, indexes, transition.to)
+        // Improved from previous implementation (Commit 3228ed15d29b6631a0233ff4c186328d1700a86f)
+        // DFA does not involve Eps, can be ignored
+        /* if (transition.label == FiniteAutomaton.Label.Eps) // Eps labels can always be traversed
+            return accept(finiteAutomaton, string, index, indexes, transition.to) */
 
-        if (transition.label is NDA.Label.Str) {
+        if (transition.label is FiniteAutomaton.Label.Str) {
             val str = transition.label.value
             if (string.startsWith(str)) // traverse on the condition
-                return accept(nda, string.substring(str.length), index + str.length, indexes, transition.to)
+                return accept(finiteAutomaton, string.substring(str.length), index + str.length, indexes, transition.to)
         }
 
         // no possibility of further traversal from this stage

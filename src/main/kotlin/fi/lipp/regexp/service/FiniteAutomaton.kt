@@ -1,18 +1,18 @@
 package fi.lipp.regexp.service
 
 /**
- * NDA stands for Non-Deterministic Automaton. It is like a graph structure with labels with a start node, and an end node.
+ * It is like a graph structure with labels with a start node, and an end node.
  * It holds a list of transitions which act as edges between nodes.
  *
  * @property start start node
- * @property end end node
+ * @property ends end node
  * @property transitions the list of transitions
  *
  * @see Transition
  */
-data class NDA(
+data class FiniteAutomaton(
     val start: Int,
-    val end: Int,
+    val ends: Set<Int>,
     val transitions: Set<Transition>
 ) {
 
@@ -50,7 +50,7 @@ data class NDA(
         }
 
         /**
-         * Use this when a certain branch of the NDA can be used only if the test string has the label value
+         * Use this when a certain branch of the nfa can be used only if the test string has the label value
          */
         data class Str(val value: String) : Label() {
             override fun toString() = value

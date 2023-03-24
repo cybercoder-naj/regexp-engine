@@ -51,8 +51,8 @@ Solutions are rated higher if they do not use libraries for working with regular
 Java and Kotlin solutions are evaluated equally.
 The effectiveness and speed of the solution are not being evaluated. We'll have an internship for finding a good algorithm.
 For the amount of time allotted to the solution, we recommend that you focus on passing all tests.
-Additional tasks are not mandatory, but completing them will have a positive impact on your evaluation.
-We encourage you to write clean and understandable code with explanatory comments where necessary.
+Additional tasks are not manfatory, but completing them will have a positive impact on your evaluation.
+We encourage you to write clean and understanfable code with explanatory comments where necessary.
 
 ### Additional tasks
 1. Do you have any ideas about how you might solve this problem in a different way? What makes these ideas better or worse than your solution?
