@@ -25,13 +25,12 @@ class RegexpServiceImpl : RegexpService {
         }
 
         val indexes = mutableSetOf<Pair<Int, Int>>()
-        // Generate all the substrings possible to test them individually.
-        // Not the best implementation, but it works.
+        // Improved from previous implementation (Commit fbd30c3308f6171d71515a08672779c71675d926)
+        // Generating suffixes of the string to collect all matching end indices
         for (i in 0..text.length) {
-            for (j in i..text.length) {
-                if (accept(nda, text.substring(i, j))) // if the individual substring passes, add the indexes
-                    indexes.add(i to (j - editor.getCarets().size)) // also adjust for the caret characters
-            }
+            val indexesFromI = mutableSetOf<Int>()
+            accept(nda, text.substring(i), i, indexesFromI)
+            indexesFromI.forEach { indexes.add(i to (it - editor.getCarets().size)) }
         }
 
         return indexes
@@ -43,42 +42,56 @@ class RegexpServiceImpl : RegexpService {
      *
      * @param nda NDA of the RegEx
      * @param string input string to test
+     * @param index the current index of the test string
+     * @param indexes the list of accepted end indices
      * @param state the current state of the NDA to examine
      * @return true is the entire string satisfies the NDA
      */
-    private fun accept(nda: NDA, string: String, state: Int = nda.start): Boolean {
-        if (state == nda.end && string.isEmpty())
-            return true // we've reached the end state while no string is remaining
+    private fun accept(
+        nda: NDA,
+        string: String,
+        index: Int,
+        indexes: MutableSet<Int>,
+        state: Int = nda.start
+    ) {
+        if (state == nda.end) {
+            indexes.add(index)
+        }
 
-        // return true if there exists a branch that reaches the final node with no string left to test
+        // test all the possible paths from the NDA
         val possibilities = nda.transitions.filter { t -> t.from == state }
         for (possibility in possibilities)
-            if (test(nda, string, possibility))
-                return true
-        return false
+            test(nda, string, possibility, index, indexes)
     }
 
     /**
      * Test if the given transition with the string would result in a successful traversal
      * through the NDA
      *
-     * @param NDA of the RegEx
+     * @param nda of the RegEx
      * @param string the testing string
      * @param transition the transition possibility from the NDA
+     * @param index the current index of the test string
+     * @param indexes the list of accepted end indices
      * @return true if the transition is valid
      */
-    private fun test(nda: NDA, string: String, transition: NDA.Transition): Boolean {
+    private fun test(
+        nda: NDA,
+        string: String,
+        transition: NDA.Transition,
+        index: Int,
+        indexes: MutableSet<Int>
+    ) {
         if (transition.label == NDA.Label.Eps) // Eps labels can always be traversed
-            return accept(nda, string, transition.to)
+            return accept(nda, string, index, indexes, transition.to)
 
         if (transition.label is NDA.Label.Str) {
             val str = transition.label.value
             if (string.startsWith(str)) // traverse on the condition
-                return accept(nda, string.substring(str.length), transition.to)
+                return accept(nda, string.substring(str.length), index + str.length, indexes, transition.to)
         }
 
         // no possibility of further traversal from this stage
-        return false
     }
 
     /**
